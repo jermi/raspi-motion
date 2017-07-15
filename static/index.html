@@ -1,0 +1,26 @@
+<html>
+<body>
+
+</body>
+<script>
+    var socket = new WebSocket("ws://" + location.host);
+    console.log('connecting...');
+    socket.onopen = function (event) {
+        console.log('connected');
+        socket.send(navigator.userAgent);
+    };
+    socket.onclose = function () {
+        console.error('disconnected');
+        document.body.append('Disconnected!');
+    };
+    socket.onmessage = function (event) {
+        if (event.data === 'true') {
+            console.log('movement!');
+            document.body.style.background = 'red';
+        } else {
+            console.log('movement stopped');
+            document.body.style.background = 'green';
+        }
+    };
+</script>
+</html>
