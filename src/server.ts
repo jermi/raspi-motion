@@ -6,34 +6,40 @@ import {ApplicationWs, WsInstance} from "./types/express-ws";
 import * as minimist from 'minimist';
 import {existsSync, readFileSync} from 'fs';
 import * as path from "path";
+import {log} from "./logger";
+import * as child_process from "child_process";
 
 const argv = minimist(process.argv.slice(2));
-const port = argv.port || 3000;
-const watchedFile = argv.file || "/sys/class/gpio/gpio17/value";
+
+const pin = "17";
+const command = `echo ${pin} > /sys/class/gpio/export`;
+if (!argv.file) { // file is for dev purposes
+    log(`executing ${command}`);
+    child_process.execSync(command);
+}
 
 const app: ApplicationWs = (express() as {}) as ApplicationWs;
 const wsInstance: WsInstance = require('express-ws')(app);
 
-console.log(`watching file ${watchedFile} for changes`);
+const watchedFile = argv.file || `/sys/class/gpio/gpio${pin}/value`;
+log(`watching file ${watchedFile} for changes`);
 // cant use fs.watch since GPIO is not covered by inotify
 let contentsPrev: string = null;
+let contents: string = null;
+const movementDetected = () => (parseInt(contents) > 0).toString();
 setInterval(() => {
-    let contents: string = null;
     if (existsSync(watchedFile)) {
         contents = readFileSync(watchedFile).toString();
     }
     if (contentsPrev !== contents) {
         contentsPrev = contents;
         const clients = wsInstance.getWss("/").clients;
-        console.log(`file contents changed to ${contents} notifying ${clients.size} clients`);
+        log(`file contents changed to ${contents} notifying ${clients.size} clients`);
         clients.forEach((client) => {
-            client.send((parseInt(contents) > 0).toString());
+            client.send(movementDetected());
         });
     }
-}, 1000);
-
-
-app.set("port", port);
+}, 500);
 
 app.use(morgan("dev"));
 app.use(bodyParser.json());
@@ -46,14 +52,17 @@ app.get("/", (req, res) => {
 app.ws('/', function (ws, req) {
     let counter = 0;
     ws.on('message', function (msg) {
-        console.log('greetings from - ' + msg);
+        log('greetings from - ' + msg);
         ws.send(`hello [${counter++}`);
+        ws.send(movementDetected());
     });
-    console.log('socket');
+    log('client connected');
 });
 
 app.use(errorHandler());
 
+const port = argv.port || 3000;
+app.set("port", port);
 app.listen(app.get("port"), () => {
-    console.log(`app running at http://localhost:${port}`);
+    log(`app running at http://localhost:${port}`);
 });

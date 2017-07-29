@@ -3,7 +3,8 @@
 
 </body>
 <script>
-    var socket = new WebSocket("ws://" + location.host);
+    var wsEndpoint = "ws://" + location.href.substring(location.href.indexOf('://') + 3);
+    var socket = new WebSocket(wsEndpoint);
     console.log('connecting...');
     socket.onopen = function (event) {
         console.log('connected');
