@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "start": "tsc && node --inspect ./dist/server.js --file=\"./dist/test\"",
+    "copy": "zip -r /tmp/raspi_motion.zip . && scp /tmp/raspi_motion.zip pi@rpi:/tmp/ && rm /tmp/raspi_motion.zip",
     "build": "tsc",
     "watch": "tsc -w",
     "tslint": "tslint -c tslint.json -p tsconfig.json"
